@@ -1,0 +1,25 @@
+{
+  "dados": {
+    "nome": "Teste 01 - PTO",
+    "arquivo": "../dados_drive_02-09-2026/Medicao01_PTO.txt",
+    "colunas": ["tempo_s", "aceleracao_x_g", "aceleracao_y_g", "aceleracao_z_g"],
+    "taxa_amostragem_hz": 1000,
+    "intervalo_tempo_s": [110, 910],
+    "aquecimento_fim_s": 410
+  },
+  "saida": {
+    "diretorio": "../resultados/PTO",
+    "dpi": 150,
+    "mostrar_graficos": false
+  },
+  "eixos": ["aceleracao_x_g", "aceleracao_y_g", "aceleracao_z_g"],
+  "janelamento": {
+    "tamanhos_janela_s": [1, 5, 10],
+    "overlaps_percentuais": [10, 30, 50]
+  },
+  "embeddings": {
+    "tsne_perplexity": 30,
+    "umap_n_neighbors": 20,
+    "random_state": 42
+  }
+}
