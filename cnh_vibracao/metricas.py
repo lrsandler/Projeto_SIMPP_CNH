@@ -79,9 +79,7 @@ nomes_metricas = ["mean", "rms", "std", "variance", "peak", "peak_to_peak", "sra
 
 
 #pode variar a quantidade de metricas a serem plotadas
-metricas_boxplot = ["mean", "rms", "std", "variance", "peak", "peak_to_peak", "sra",
-                   "skewness", "kurtosis", "crest_factor", "shape_factor", "impulse_factor", "clearance_factor",
-                    "rms_espectral", "energia_espectral"]
+metricas_boxplot = ["rms", "std", "peak", "crest_factor", "rms_espectral", "energia_espectral"]
 
 
 def calcular_grade(n_itens: int, max_colunas: int = 4):
@@ -94,25 +92,29 @@ def calcular_grade(n_itens: int, max_colunas: int = 4):
 def plotar_boxplots_metricas(colunas_features: dict, eixos: list, config: dict, dir_saida: Path,
                               frame_size_s: float, overlap_pct: float):
     cores = cores_por_eixo(eixos)
-    n_linhas, n_colunas = calcular_grade(len(metricas_boxplot))
+    n_linhas, n_colunas = calcular_grade(len(metricas_boxplot), max_colunas=3)
 
     fig, axs = plt.subplots(n_linhas, n_colunas, figsize=(4 * n_colunas, 3.3 * n_linhas), squeeze=False)
     eixos_grafico = list(axs.flat)
 
     for ax, metrica in zip(eixos_grafico, metricas_boxplot):
         dados = [colunas_features[f"{eixo}_{metrica}"] for eixo in eixos]
-        caixas = ax.boxplot(dados, tick_labels=eixos, patch_artist=True)
+        caixas = ax.boxplot(dados, tick_labels=["x", "y", "z"], patch_artist=True)
         for patch, eixo in zip(caixas["boxes"], eixos):
             patch.set_facecolor(cores[eixo])
-        ax.set_title(metrica)
-        ax.tick_params(axis="x", rotation=45)
+        ax.set_title(metrica, fontsize=16, fontweight="bold")
+
+        ax.tick_params(axis="x", labelsize=16 )
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight("bold")
+
         ax.grid(True, axis="y", linestyle="-", alpha=0.3)
 
     for ax_sobrando in eixos_grafico[len(metricas_boxplot):]:
         ax_sobrando.axis("off")
 
     rotulo = f"janela {f"{frame_size_s:g}s"} / overlap {overlap_pct:g}%"
-    fig.suptitle(f"Boxplots das Metricas - {config['dados']['nome']} - {rotulo}")
+    fig.suptitle(f"Boxplots das Metricas - {config['dados']['nome']} - {rotulo}", fontsize=16, fontweight="bold")
     fig.tight_layout()
     dir_saida_boxplot = dir_saida / "boxplots_metricas"
     dir_saida_boxplot.mkdir(parents=True, exist_ok=True)

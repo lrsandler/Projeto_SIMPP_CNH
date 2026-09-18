@@ -67,11 +67,15 @@ def plotar_corte(df: pd.DataFrame, config: dict, dir_saida: Path, inicio_s: floa
         ax.axvline(inicio_s, color="black", linestyle="--", linewidth=1)
         ax.axvline(aquecimento_fim_s, color="black", linestyle=":", linewidth=1)
         ax.axvline(fim_s, color="black", linestyle="--", linewidth=1)
-        ax.set_ylabel(eixo)
+        ax.set_ylabel(eixo, fontsize=16, fontweight="bold")
         ax.grid(True, linestyle="-", alpha=0.3)
 
+        ax.tick_params(axis="x", labelsize=16 )
+        ax.tick_params(axis="y", labelsize=16 )
+        
+
     axs[-1].set_xlabel(coluna_tempo)
-    fig.suptitle(f"Recorte da Serie (aquecimento {inicio_s:g}s-{aquecimento_fim_s:g}s + regime estacionario {aquecimento_fim_s:g}s-{fim_s:g}s) - {config['dados']['nome']}")
+    fig.suptitle(f"Recorte da Série (aquecimento {inicio_s:g}s-{aquecimento_fim_s:g}s + regime estacionario {aquecimento_fim_s:g}s-{fim_s:g}s) - {config['dados']['nome']}", fontsize=16, fontweight="bold")
     fig.tight_layout()
     finalizar_figura(fig, dir_saida, "corte_serie", config)
 
@@ -91,9 +95,13 @@ def plotar_dominio_tempo(df: pd.DataFrame, config: dict, dir_saida: Path):
         ax.plot(tempo, df[eixo].values[::fator], linewidth=0.5, color=cores[eixo])
         ax.set_ylabel(eixo)
         ax.grid(True, linestyle="-", alpha=0.3)
+        for label in ax.get_xticklabels() + ax.get_yticklabels():
+            label.set_fontweight("bold")
+        ax.tick_params(axis="x", labelsize=16 )
+        ax.tick_params(axis="y", labelsize=16 )
 
     axs[-1].set_xlabel(coluna_tempo)
-    fig.suptitle(f"Serie Temporal - {config['dados']['nome']}")
+    fig.suptitle(f"Serie Temporal - {config['dados']['nome']}", fontsize=16, fontweight="bold")
     fig.tight_layout()
     finalizar_figura(fig, dir_saida, "serie_temporal", config)
 
@@ -136,15 +144,17 @@ def plotar_dominio_frequencia(df: pd.DataFrame, config: dict, dir_saida: Path):
             if freqs is None:
                 ax.text(0.5, 0.5, "janela maior que o sinal disponivel", ha="center", va="center", transform=ax.transAxes)
                 continue
+            ax.tick_params(axis="x", labelsize=16 )
+            ax.tick_params(axis="y", labelsize=16 )
 
             algum_valido = True
-            ax.plot(freqs, amplitude, linewidth=0.7, color=cores[eixo])
-            ax.set_ylabel(eixo)
+            ax.plot(freqs, amplitude, linewidth=1, color=cores[eixo])
+            ax.set_ylabel(eixo, fontsize=16, fontweight="bold")
             ax.grid(True, linestyle="-", alpha=0.3)
 
-        axs[-1].set_xlabel("Frequencia [Hz]")
+        axs[-1].set_xlabel("Frequencia [Hz]", fontsize=16, fontweight="bold")
         axs[-1].set_xlim(0, fs / 2)
-        fig.suptitle(f"Espectro de Frequencia - FFT (Amplitude [g]) - {config['dados']['nome']} - {rotulo}")
+        axs[0].set_title(f"Espectro de Frequencia - FFT (Amplitude [g]) - {config['dados']['nome']} - {rotulo}", fontsize=16, fontweight="bold")
         fig.tight_layout()
 
         if algum_valido:
@@ -195,11 +205,14 @@ def plotar_espectrograma(df: pd.DataFrame, config: dict, dir_saida: Path):
             amplitudes_db = 20 * np.log10(np.maximum(amplitudes, 1e-12))
             malha = ax.pcolormesh(tempos_centro, freqs, amplitudes_db.T, shading="auto", cmap="plasma")
             fig.colorbar(malha, ax=ax, label="Amplitude [dB]")
-            ax.set_ylabel(f"{eixo}\nFrequencia [Hz]")
+            ax.set_ylabel(f"{eixo}\nFrequencia [Hz]", fontsize=16, fontweight="bold")
             ax.set_ylim(0, fs / 2)
+            ax.set_title(eixo, fontsize=16, fontweight="bold")
+            ax.tick_params(axis="x", labelsize=14)
+            ax.tick_params(axis="y", labelsize=14)
 
-        axs[-1].set_xlabel(coluna_tempo)
-        fig.suptitle(f"Espectrograma - {config['dados']['nome']} - {rotulo}")
+        axs[-1].set_xlabel(coluna_tempo, fontsize=16, fontweight="bold")
+        fig.suptitle(f"Espectrograma - {config['dados']['nome']} - {rotulo}", fontsize=16, fontweight="bold")
         fig.tight_layout()
 
         if algum_valido:

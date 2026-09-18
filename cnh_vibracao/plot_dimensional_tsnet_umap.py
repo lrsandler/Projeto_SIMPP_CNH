@@ -39,8 +39,8 @@ def cores_por_fase(tempo_centro_s: np.ndarray, aquecimento_fim_s: float):
     return cores, fase, info_fases
 
 
-def plotar_embeddings(caminho_csv: Path, config: dict, dir_saida: Path):
-    df = pd.read_csv(caminho_csv)
+
+def plotar_embeddings(df: pd.DataFrame, caminho_csv: Path, config: dict, dir_saida: Path, caminho_saida: Path = None, eixo: str = None):
     colunas_features = [c for c in df.columns if c not in ("indice_janela", "tempo_centro_s")]
 
     X = StandardScaler().fit_transform(df[colunas_features].values)
@@ -70,11 +70,23 @@ def plotar_embeddings(caminho_csv: Path, config: dict, dir_saida: Path):
         mappable = plt.cm.ScalarMappable(norm=normalizador, cmap=cmap)
         fig.colorbar(mappable, ax=axs, orientation="horizontal", fraction=0.04, pad=0.1)
 
-    fig.suptitle(f"{config['dados']['nome']} - {caminho_csv.stem}")
+    titulo = f"{config['dados']['nome']} - {caminho_csv.stem}"
+    if eixo is not None:
+        titulo += f" - {eixo}"
+    fig.suptitle(titulo, fontsize=16, fontweight="bold")
 
-    caminho_saida = dir_saida / f"{caminho_csv.stem}_embeddings.png"
+    if caminho_saida is None:
+        caminho_saida = dir_saida / f"{caminho_csv.stem}_embeddings.png"
+
     fig.savefig(caminho_saida, dpi=config["saida"]["dpi"], bbox_inches="tight")
     plt.close(fig)
+
+def plot_embeddings_por_eixo(caminho_csv: Path, config: dict, dir_saida: Path):
+
+    for eixo in config["eixos"]:
+        colunas_features = [c for c in pd.read_csv(caminho_csv, nrows=0).columns if c.startswith(f"{eixo}_")]
+        df_eixo = pd.read_csv(caminho_csv, usecols=["indice_janela", "tempo_centro_s"] + colunas_features)
+        plotar_embeddings(df_eixo, caminho_csv, config, dir_saida, caminho_saida=dir_saida / f"{caminho_csv.stem}_{eixo}_embeddings.png", eixo=eixo)
 
 
 def main():
@@ -83,11 +95,15 @@ def main():
         config = json.load(f)
         
     dir_saida = preparar_diretorio_saida(config, base_dir)
+    dir_tsne_umap = dir_saida / "tsne_umap"
+    dir_tsne_umap.mkdir(parents=True, exist_ok=True)
 
     dir_csv = dir_saida / "csv"
 
     for caminho_csv in sorted(dir_csv.glob("metricas_*.csv")):
-        plotar_embeddings(caminho_csv, config, dir_saida)
+        df = pd.read_csv(caminho_csv)
+        plotar_embeddings(df,caminho_csv, config, dir_tsne_umap)
+        plot_embeddings_por_eixo(caminho_csv, config, dir_tsne_umap)
 
 
 if __name__ == "__main__":
