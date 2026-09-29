@@ -93,11 +93,6 @@ def metrica_entropia(janelas: np.ndarray):
     prob = contagens / n_amostras
     return -np.sum(prob * np.log(prob, out=np.zeros_like(prob), where=prob > 0), axis=1) / np.log(n_bins)
 
-def metrica_kurtosis_factor(janelas: np.ndarray):
-    kurtosis_pearson = kurtosis(janelas, axis=1, fisher=False)
-    rms4 = metrica_rms(janelas) ** 4
-    return np.divide(kurtosis_pearson, rms4, out=np.zeros_like(rms4), where=rms4 != 0)
-
 # mostra quanta potencia do sinal esta em cada frequencia (periodograma); remove a media antes do calculo
 def calcular_densidade_espectral_potencia(janelas: np.ndarray, fs: float):
     return periodogram(janelas, fs=fs, axis=1, scaling="spectrum")
@@ -124,7 +119,7 @@ def metrica_variancia_espectral(espectro: np.ndarray):
 
 nomes_metricas_tempo = ["mean", "rms", "std", "variance", "peak", "peak_to_peak", "sra",
                    "skewness", "kurtosis", "crest_factor", "shape_factor", "impulse_factor", "clearance_factor",
-                   "entropia", "kurtosis_factor"]
+                   "entropia"]
 
 nomes_metricas_frequencia = ["media_espectral", "variancia_espectral"]
 
@@ -206,7 +201,7 @@ def calcular_metricas(df, config: dict, dir_saida_csv: Path, dir_saida_boxplot: 
                 "impulse_factor": metrica_impulse_factor(janelas),
                 "clearance_factor": metrica_clearance_factor(janelas),
                 "entropia": metrica_entropia(janelas),
-                "kurtosis_factor": metrica_kurtosis_factor(janelas),                "media_espectral": metrica_media_espectral(espectro),
+                "media_espectral": metrica_media_espectral(espectro),
                 "variancia_espectral": metrica_variancia_espectral(espectro),
             }
             for nome in nomes_metricas:
