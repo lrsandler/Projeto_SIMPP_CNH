@@ -58,29 +58,75 @@ def metrica_clearance_factor(janelas: np.ndarray):
     peak = metrica_peak(janelas)
     return np.divide(peak, sra, out=np.zeros_like(peak), where=sra != 0)
 
+def metrica_entropia(janelas: np.ndarray):
+    """Entropia de Shannon da distribuicao de amplitudes de cada janela: H = -sum P(x) log P(x).
+
+    O que mede: o quanto os valores do sinal se espalham entre as faixas de amplitude.
+    0 = todas as amostras na mesma faixa (sinal quase constante); 1 = amostras igualmente
+    distribuidas em todas as faixas. Descreve o formato da distribuicao de amplitudes, nao o seu tamanho.
+
+    Como calcula:
+      1. divide a faixa [min, max] de cada janela em n_bins intervalos iguais (bins); por usar o
+         min/max da propria janela, a entropia nao depende da escala do sinal
+      2. conta quantas amostras caem em cada bin e divide por N -> probabilidade P(x) de cada bin
+      3. soma -P log P (bins vazios nao contribuem) e divide por log(n_bins), o maximo possivel -> 0 a 1
+
+    n_bins pela regra de Rice, n_bins = ceil(2 * N^(1/3)), com N = amostras por janela
+    (= taxa de amostragem x duracao da janela): 20 bins para 1 s, 35 para 5 s e 44 para 10 s a 1000 Hz.
+    Depende so do tamanho da janela, entao todos os pontos com a mesma janela usam o mesmo n_bins
+    e suas entropias sao comparaveis. Entropias de tamanhos de janela diferentes NAO sao comparaveis.
+
+    janelas: (n_janelas, N) -> retorna (n_janelas,)
+    """
+    n_janelas, n_amostras = janelas.shape
+    n_bins = int(np.ceil(2 * n_amostras ** (1 / 3)))
+
+    # posicao relativa de cada amostra dentro da faixa da janela (0 = min, 1 = max)
+    minimo = janelas.min(axis=1, keepdims=True)
+    amplitude = janelas.max(axis=1, keepdims=True) - minimo
+    posicao = np.divide(janelas - minimo, amplitude, out=np.zeros_like(janelas), where=amplitude != 0)
+
+    indice_bin = np.minimum((posicao * n_bins).astype(int), n_bins - 1)
+
+    deslocado = indice_bin + n_bins * np.arange(n_janelas)[:, None]
+    contagens = np.bincount(deslocado.ravel(), minlength=n_bins * n_janelas).reshape(n_janelas, n_bins)
+    prob = contagens / n_amostras
+    return -np.sum(prob * np.log(prob, out=np.zeros_like(prob), where=prob > 0), axis=1) / np.log(n_bins)
+
+def metrica_kurtosis_factor(janelas: np.ndarray):
+    kurtosis_pearson = kurtosis(janelas, axis=1, fisher=False)
+    rms4 = metrica_rms(janelas) ** 4
+    return np.divide(kurtosis_pearson, rms4, out=np.zeros_like(rms4), where=rms4 != 0)
+
 # mostra quanta potencia do sinal esta em cada frequencia (periodograma); remove a media antes do calculo
 def calcular_densidade_espectral_potencia(janelas: np.ndarray, fs: float):
     return periodogram(janelas, fs=fs, axis=1, scaling="spectrum")
 
-#metricas dominio da frequencia
+#metricas dominio da frequencia 
 
-# RMS calculado a partir do espectro em vez do sinal no tempo
-def metrica_rms_espectral(janelas: np.ndarray, fs: float):
-    _, densidade_potencia = calcular_densidade_espectral_potencia(janelas, fs)
-    return np.sqrt(np.sum(densidade_potencia, axis=1))
+# espectro de magnitude unilateral em g
+def calcular_espectro_amplitude(janelas: np.ndarray, fs: float):
+    freqs, psd = calcular_densidade_espectral_potencia(janelas, fs)
+    amplitude = np.sqrt(2 * psd)
+    amplitude[:, 0] = np.sqrt(psd[:, 0])
+    if janelas.shape[1] % 2 == 0:
+        amplitude[:, -1] = np.sqrt(psd[:, -1])
+    return freqs, amplitude
 
-def metrica_energia_espectral(janelas: np.ndarray, fs: float):
-    _, densidade_potencia = calcular_densidade_espectral_potencia(janelas, fs)
-    return np.sum(densidade_potencia, axis=1)
+# as metricas espectrais recebem o espectro de amplitude (n_janelas x n_frequencias) ja calculado
+# assim a FFT e feita uma vez so por eixo
 
-nomes_metricas = ["mean", "rms", "std", "variance", "peak", "peak_to_peak", "sra",
+def metrica_media_espectral(espectro: np.ndarray):
+    return np.mean(espectro, axis=1)
+
+def metrica_variancia_espectral(espectro: np.ndarray):
+    return np.var(espectro, axis=1)
+
+nomes_metricas_tempo = ["mean", "rms", "std", "variance", "peak", "peak_to_peak", "sra",
                    "skewness", "kurtosis", "crest_factor", "shape_factor", "impulse_factor", "clearance_factor",
-                   "rms_espectral", "energia_espectral"]
+                   "entropia", "kurtosis_factor"]
 
-
-#pode variar a quantidade de metricas a serem plotadas
-metricas_boxplot = ["rms", "std", "peak", "crest_factor", "rms_espectral", "energia_espectral"]
-
+nomes_metricas_frequencia = ["media_espectral", "variancia_espectral"]
 
 def calcular_grade(n_itens: int, max_colunas: int = 4):
     n_colunas = min(max_colunas, n_itens)
@@ -88,11 +134,11 @@ def calcular_grade(n_itens: int, max_colunas: int = 4):
     n_linhas = -(-n_itens // n_colunas)  
     return n_linhas, n_colunas
 
-
-def plotar_boxplots_metricas(colunas_features: dict, eixos: list, config: dict, dir_saida: Path,
+#pode variar a quantidade de metricas a serem plotadas (passadas em metricas_boxplot)
+def plotar_boxplots_metricas(colunas_features: dict, metricas_boxplot: list, eixos: list, config: dict, dir_saida: Path,
                               frame_size_s: float, overlap_pct: float):
     cores = cores_por_eixo(eixos)
-    n_linhas, n_colunas = calcular_grade(len(metricas_boxplot), max_colunas=3)
+    n_linhas, n_colunas = calcular_grade(len(metricas_boxplot), max_colunas=5)
 
     fig, axs = plt.subplots(n_linhas, n_colunas, figsize=(4 * n_colunas, 3.3 * n_linhas), squeeze=False)
     eixos_grafico = list(axs.flat)
@@ -102,6 +148,8 @@ def plotar_boxplots_metricas(colunas_features: dict, eixos: list, config: dict, 
         caixas = ax.boxplot(dados, tick_labels=["x", "y", "z"], patch_artist=True)
         for patch, eixo in zip(caixas["boxes"], eixos):
             patch.set_facecolor(cores[eixo])
+        for mediana in caixas["medians"]:
+            mediana.set_color("black")
         ax.set_title(metrica, fontsize=16, fontweight="bold")
 
         ax.tick_params(axis="x", labelsize=16 )
@@ -128,6 +176,7 @@ def calcular_metricas(df, config: dict, dir_saida_csv: Path, dir_saida_boxplot: 
     janela_cfg = config["janelamento"]
     combinacoes = gerar_combinacoes_janela(janela_cfg["tamanhos_janela_s"], janela_cfg["overlaps_percentuais"])
     tempo = df[coluna_tempo].values
+    nomes_metricas = nomes_metricas_tempo + nomes_metricas_frequencia
 
     for frame_size_s, hop_s, overlap_pct in combinacoes:
         colunas_features = {}
@@ -139,6 +188,8 @@ def calcular_metricas(df, config: dict, dir_saida_csv: Path, dir_saida_boxplot: 
                 tempos_centro_ref = None
                 break
             tempos_centro_ref = tempos_centro
+
+            _, espectro = calcular_espectro_amplitude(janelas, fs)
 
             valores = {
                 "mean": metrica_mean(janelas),
@@ -154,9 +205,9 @@ def calcular_metricas(df, config: dict, dir_saida_csv: Path, dir_saida_boxplot: 
                 "shape_factor": metrica_shape_factor(janelas),
                 "impulse_factor": metrica_impulse_factor(janelas),
                 "clearance_factor": metrica_clearance_factor(janelas),
-                #"freq_dominante": metrica_freq_dominante(janelas, fs),
-                "rms_espectral": metrica_rms_espectral(janelas, fs),
-                "energia_espectral": metrica_energia_espectral(janelas, fs),
+                "entropia": metrica_entropia(janelas),
+                "kurtosis_factor": metrica_kurtosis_factor(janelas),                "media_espectral": metrica_media_espectral(espectro),
+                "variancia_espectral": metrica_variancia_espectral(espectro),
             }
             for nome in nomes_metricas:
                 colunas_features[f"{eixo}_{nome}"] = valores[nome]
@@ -170,7 +221,7 @@ def calcular_metricas(df, config: dict, dir_saida_csv: Path, dir_saida_boxplot: 
         caminho = dir_saida_csv / f"metricas_frame{f"{frame_size_s:g}s"}_overlap{overlap_pct:g}pct.csv"
         pd.DataFrame(tabela).to_csv(caminho, index=False)
 
-        plotar_boxplots_metricas(colunas_features, eixos, config, dir_saida_boxplot, frame_size_s, overlap_pct)
+        plotar_boxplots_metricas(colunas_features, nomes_metricas, eixos, config, dir_saida_boxplot, frame_size_s, overlap_pct)
 
 
 def main():

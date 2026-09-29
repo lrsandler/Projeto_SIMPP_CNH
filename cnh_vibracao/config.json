@@ -1,11 +1,13 @@
 {
   "dados": {
     "nome": "Teste 01 - PTO",
+    "diretorio_dados": "../dados_drive_02-09-2026",
     "arquivo": "../dados_drive_02-09-2026/Medicao01_PTO.txt",
     "colunas": ["tempo_s", "aceleracao_x_g", "aceleracao_y_g", "aceleracao_z_g"],
     "taxa_amostragem_hz": 1000,
     "intervalo_tempo_s": [110, 910],
-    "aquecimento_fim_s": 410
+    "aquecimento_fim_s": 410,
+    "paletas": {"aquecimento": "Reds", "regime_estacionario": "Blues"}
   },
   "saida": {
     "diretorio": "../resultados/PTO",
@@ -17,9 +19,36 @@
     "tamanhos_janela_s": [1, 5, 10],
     "overlaps_percentuais": [10, 30, 50]
   },
+  "frequencia": {
+    "bandas_hz": [[0, 50], [50, 150], [150, 300], [300, 500]]
+  },
   "embeddings": {
-    "tsne_perplexity": 30,
-    "umap_n_neighbors": 20,
+    "tsne_perplexity": 40,
+    "umap_n_neighbors": 15,
     "random_state": 42
+  },
+
+  "combinado": {
+    "arquivo_plot_combinado": "metricas_frame1s_overlap50pct.csv",
+    "arquivo_bandas_combinado": "bandas_frame10s_overlap50pct.csv",
+    "save_dir": "../resultados/Plots_combinados",
+    "pontos": [
+   
+     
+      {
+        "nome": "Saca Palha Traseiro",
+        "dir_csv": "../resultados/SacaPalhaTraseiro/csv",
+        "dir_csv_bandas": "../resultados/SacaPalhaTraseiro/bandas_frequencia/csv",
+        "aquecimento_fim_s": null,
+        "paletas": {"regime_estacionario": "Oranges"}
+            },
+      {
+        "nome": "Saca Palha Dianteiro",
+        "dir_csv": "../resultados/SacaPalhaDianteiro/csv",
+        "dir_csv_bandas": "../resultados/SacaPalhaDianteiro/bandas_frequencia/csv",
+        "aquecimento_fim_s": null,
+        "paletas": {"regime_estacionario": "Purples"}
+            }
+    ]
   }
 }

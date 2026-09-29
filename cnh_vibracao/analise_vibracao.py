@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 def resolver_caminho(base_dir: Path, caminho: str):
     caminho = Path(caminho)
     return caminho if caminho.is_absolute() else (base_dir / caminho)
@@ -28,11 +27,9 @@ def finalizar_figura(fig, dir_saida: Path, nome_arquivo: str, config: dict):
         plt.show()
     plt.close(fig)
 
-
 paleta = plt.get_cmap("tab10").colors
 def cores_por_eixo(eixos: list):
     return {eixo: paleta[i % len(paleta)] for i, eixo in enumerate(eixos)}
-
 
 def gerar_combinacoes_janela(tamanhos_s: list, overlaps_percentuais: list):
     combinacoes = []
@@ -167,6 +164,7 @@ def calcular_espectrograma(sinal: np.ndarray, tempo: np.ndarray, fs: float, fram
     janelas, tempos_centro = criar_janelas_deslizantes(sinal, tempo, fs, frame_size_s, hop_s)
 
     frame_len = janelas.shape[1]
+    #janelas de hann para reduzir vazamento espectral 
     peso_janela = np.hanning(frame_len)
     fator_normalizacao = peso_janela.sum()
 
